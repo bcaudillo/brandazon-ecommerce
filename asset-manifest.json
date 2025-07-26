@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/brandazon-ecommerce/static/css/main.a5eecf79.css",
-    "main.js": "/brandazon-ecommerce/static/js/main.06de6748.js",
+    "main.js": "/brandazon-ecommerce/static/js/main.ee9d6b77.js",
     "index.html": "/brandazon-ecommerce/index.html",
     "main.a5eecf79.css.map": "/brandazon-ecommerce/static/css/main.a5eecf79.css.map",
-    "main.06de6748.js.map": "/brandazon-ecommerce/static/js/main.06de6748.js.map"
+    "main.ee9d6b77.js.map": "/brandazon-ecommerce/static/js/main.ee9d6b77.js.map"
   },
   "entrypoints": [
     "static/css/main.a5eecf79.css",
-    "static/js/main.06de6748.js"
+    "static/js/main.ee9d6b77.js"
   ]
 }

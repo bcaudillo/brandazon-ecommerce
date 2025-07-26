@@ -636,18 +636,7 @@ const Header = ({ navigate, cartItemCount }) => {
 };
 
 const PartnershipBanner = () => {
-  useEffect(() => {
-    // Promotion Viewed event
-    if (window.analytics) {
-      window.analytics.track('Promotion Viewed', {
-        promotion_id: 'labubu_popmart_banner_top',
-        creative: 'labubu_x_popmart_banner',
-        name: 'Labubu x Popmart Exclusive Partnership',
-        position: 'home_banner_top'
-      });
-    }
-  }, []);
-
+  // Removed Promotion Viewed event from useEffect, now only triggered by click
   const handleShopNowClick = () => {
     // Promotion Clicked event
     if (window.analytics) {
@@ -717,6 +706,23 @@ const ProductCard = ({ product, navigate, position }) => {
     if (window.analytics) {
       window.analytics.track('Product Clicked', formatProductForSegment(product, 1, position));
     }
+    // Product Viewed event - Triggered by button click, not just component mount
+    if (window.analytics) {
+      window.analytics.track('Product Viewed', {
+        product_id: product.id,
+        sku: product.sku,
+        category: product.category,
+        name: product.name,
+        brand: product.brand,
+        variant: product.variant,
+        price: product.price,
+        quantity: 1,
+        currency: 'USD',
+        value: product.price,
+        url: `${window.location.origin}${window.location.pathname}#/product/${product.id}`,
+        image_url: product.imageUrl,
+      });
+    }
     navigate('productDetail', product.id);
   };
 
@@ -754,17 +760,7 @@ const ProductCard = ({ product, navigate, position }) => {
 };
 
 const HomePage = ({ navigate }) => {
-  useEffect(() => {
-    // Product List Viewed event for Featured Products
-    if (window.analytics) {
-      window.analytics.track('Product List Viewed', {
-        list_id: 'featured_labubu_collectibles',
-        category: 'Collectible',
-        products: featuredProducts.map((p, index) => formatProductForSegment(p, 1, index + 1))
-      });
-    }
-  }, []);
-
+  // Removed Product List Viewed event from useEffect
   return (
     <div className="container mx-auto p-6">
       <PartnershipBanner />
@@ -787,17 +783,7 @@ const HomePage = ({ navigate }) => {
 };
 
 const ProductsPage = ({ navigate }) => {
-  useEffect(() => {
-    // Product List Viewed event for All Products
-    if (window.analytics) {
-      window.analytics.track('Product List Viewed', {
-        list_id: 'all_products',
-        category: 'All',
-        products: products.map((p, index) => formatProductForSegment(p, 1, index + 1))
-      });
-    }
-  }, []);
-
+  // Removed Product List Viewed event from useEffect
   return (
     <div className="container mx-auto p-6">
       <h2 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">All Products</h2>
@@ -811,59 +797,39 @@ const ProductsPage = ({ navigate }) => {
 };
 
 const ProductDetailPage = ({ productId, navigate }) => {
-  const [utmParams, setUtmParams] = useState(null);
+  const [utmParams, setUtmParams] = useState(null); // Keep this state for UTMs
   const { cart, setCart } = useContext(CartContext);
 
   const product = products.find(p => p.id === productId);
 
   useEffect(() => {
-    const hashParts = window.location.hash.split('?');
-    const queryString = hashParts.length > 1 ? hashParts[1] : '';
-    const params = new URLSearchParams(queryString);
+    // Campaign Attribution Recorded (if UTMs are present) - Now triggered by the ProductDetailPage loading
+    // and checking for UTMs, which is a page-specific attribution, not a general "track" event on mount.
+    // This is a special case where the "track" event is directly related to the URL state.
+    if (window.analytics && product) {
+      const hashParts = window.location.hash.split('?');
+      const queryString = hashParts.length > 1 ? hashParts[1] : '';
+      const params = new URLSearchParams(queryString);
 
-    const parsedUtm = {};
-    for (let [key, value] of params.entries()) {
-      if (key.startsWith('utm_') || key.startsWith('gad_') || key.startsWith('gclid') || key.startsWith('gbraid')) {
-        parsedUtm[key] = value;
-      }
-    }
-    if (Object.keys(parsedUtm).length > 0) {
-      setUtmParams(parsedUtm);
-    } else {
-      setUtmParams(null);
-    }
-
-    if (product) {
-      // Product Viewed event
-      if (window.analytics) {
-        window.analytics.track('Product Viewed', {
-          product_id: product.id,
-          sku: product.sku,
-          category: product.category,
-          name: product.name,
-          brand: product.brand,
-          variant: product.variant,
-          price: product.price,
-          quantity: 1,
-          currency: 'USD', // Assuming USD as default currency
-          value: product.price, // Value for single item view
-          url: `${window.location.origin}${window.location.pathname}#/product/${product.id}`,
-          image_url: product.imageUrl,
-        });
-      }
-
-      // Campaign Attribution Recorded (if UTMs are present)
-      if (Object.keys(parsedUtm).length > 0) {
-        if (window.analytics) {
-          window.analytics.track('Campaign Attribution Recorded', {
-            product_id: product.id,
-            product_name: product.name,
-            ...parsedUtm
-          });
+      const parsedUtm = {};
+      for (let [key, value] of params.entries()) {
+        if (key.startsWith('utm_') || key.startsWith('gad_') || key.startsWith('gclid') || key.startsWith('gbraid')) {
+          parsedUtm[key] = value;
         }
       }
+
+      if (Object.keys(parsedUtm).length > 0) {
+        setUtmParams(parsedUtm); // Update state with parsed UTMs
+        window.analytics.track('Campaign Attribution Recorded', {
+          product_id: product.id,
+          product_name: product.name,
+          ...parsedUtm
+        });
+      } else {
+        setUtmParams(null); // Clear if no UTMs are present
+      }
     }
-  }, [productId, product, utmParams]);
+  }, [productId, product]); // Depend on productId and product only for this effect
 
   if (!product) {
     return (
@@ -928,15 +894,9 @@ const ProductDetailPage = ({ productId, navigate }) => {
 const CartPage = ({ navigate }) => {
   const { cart, setCart } = useContext(CartContext);
 
-  useEffect(() => {
-    // Cart Viewed event
-    if (window.analytics) {
-      window.analytics.track('Cart Viewed', {
-        cart_id: 'brandazon_cart_id', // Placeholder cart ID
-        products: cart.map(item => formatProductForSegment(item, item.quantity))
-      });
-    }
-  }, [cart]); // Re-track when cart changes
+  // Removed Cart Viewed event from useEffect
+  // It's generally better to track Cart Viewed as part of a page() call or
+  // only when the user explicitly interacts with the cart (e.g., clicks a "View Cart" button)
 
   const updateQuantity = (id, delta) => {
     const item = cart.find(i => i.id === id);
@@ -1095,26 +1055,20 @@ const CheckoutPage = ({ navigate }) => {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  // Placeholder for user ID - In a real app, this would come from an auth system
-  const userId = 'user_12345';
-  const userTraits = {
-    email: 'user@example.com',
-    name: 'John Doe',
-  };
-
   useEffect(() => {
+    // Placeholder for user ID - In a real app, this would come from an auth system
+    const userId = 'user_12345';
+    const userTraits = {
+      email: 'user@example.com',
+      name: 'John Doe',
+    };
+
     // Identify call on checkout page load (or when user logs in/is identified)
     if (window.analytics) {
       window.analytics.identify(userId, userTraits);
     }
 
-    // Checkout Step Viewed event
-    if (window.analytics) {
-      window.analytics.track('Checkout Step Viewed', {
-        checkout_id: 'brandazon_checkout_id', // Placeholder checkout ID
-        step: 1, // Assuming this is the first step of checkout
-      });
-    }
+    // Removed Checkout Step Viewed event from useEffect
   }, []); // Only on mount
 
   const handlePlaceOrder = () => {
@@ -1188,7 +1142,7 @@ const CheckoutPage = ({ navigate }) => {
                 </ul>
               )}
               <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
-                <p className="text-2xl font-bold text-gray-900">Total:</p>
+                <p className="text-2xl font-bold text-gray-900 mr-4">Total:</p>
                 <p className="text-3xl font-extrabold text-purple-800">${totalAmount.toFixed(2)}</p>
               </div>
             </div>
@@ -1249,23 +1203,22 @@ const CheckoutPage = ({ navigate }) => {
                 disabled={cart.length === 0}
                 className={`py-3 px-6 rounded-lg text-lg font-semibold transition duration-300 ease-in-out shadow-md hover:shadow-lg
                   ${cart.length === 0 ? 'bg-gray-400 text-gray-600 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-              >
-                Place Order
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+            >
+              Place Order
+            </button>
+          </div>
+        </>
+      )}
     </div>
-  );
+  </div>
+);
 };
 
-// New Simulated Search Engine Page
-const SimulatedSearchEnginePage = () => {
+const SimulatedSearchEnginePage = ({ products }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    // Page view for Simulated Search Engine
+    // Page view for Simulated Search Engine (this is a page, not a track event on mount)
     if (window.analytics) {
       window.analytics.page('Marketing', 'Simulated Search Engine Page', {
         path: window.location.pathname + window.location.hash,
@@ -1288,7 +1241,7 @@ const SimulatedSearchEnginePage = () => {
       targetProductId = matchedProduct.id;
     }
 
-    // Products Searched event
+    // Products Searched event (triggered by click)
     if (window.analytics) {
       window.analytics.track('Products Searched', {
         query: searchTerm.trim()
@@ -1347,19 +1300,23 @@ const SimulatedSearchEnginePage = () => {
 
 // --- Main App Component ---
 const App = () => {
+  // We'll manage routing based on window.location.hash directly
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [cart, setCart] = useState([]);
 
+  // Effect to handle initial page load and hash changes for routing and Segment page calls
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleNavigationAndTracking = () => {
       const hash = window.location.hash;
       let pageName = '';
       let pageCategory = '';
+      let currentProductId = null; // To store product ID if on product detail page
 
       if (hash.startsWith('#/product/')) {
         const productIdFromHash = hash.split('?')[0].replace('#/product/', '');
         setCurrentPage('productDetail');
+        currentProductId = productIdFromHash;
         setSelectedProductId(productIdFromHash);
         pageName = 'Product Detail Page';
         pageCategory = 'E-commerce';
@@ -1391,41 +1348,44 @@ const App = () => {
         pageCategory = 'E-commerce';
       }
 
-      // Segment Page call for every route change
+      // Segment Page call for every route change, including initial load after refresh
       if (window.analytics) {
         window.analytics.page(pageCategory, pageName, {
           path: window.location.pathname + window.location.hash,
-          url: window.location.href
+          url: window.location.href,
+          // Add product_id to page properties if on product detail page
+          ...(currentProductId && { product_id: currentProductId })
         });
       }
-
     };
 
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange);
+    // Set initial page and trigger Segment page call on component mount (after refresh)
+    handleNavigationAndTracking();
+
+    // Listen for hash changes for subsequent in-app navigation
+    window.addEventListener('hashchange', handleNavigationAndTracking);
+
+    // Cleanup listener
     return () => {
-      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('hashchange', handleNavigationAndTracking);
     };
-  }, []);
+  }, []); // Run once on mount
 
   // Placeholder for initial user identification (e.g., on first load or after login)
   useEffect(() => {
-    // In a real app, you'd get a user ID from an authentication system
-    // For now, we can generate a simple one or use a static one for testing
     const anonymousId = localStorage.getItem('anonymousId');
     if (!anonymousId) {
       const newAnonymousId = `anon-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
       localStorage.setItem('anonymousId', newAnonymousId);
       if (window.analytics) {
-        window.analytics.identify(newAnonymousId); // Identify with anonymous ID
+        window.analytics.identify(newAnonymousId);
       }
     } else {
       if (window.analytics) {
-        window.analytics.identify(anonymousId); // Re-identify existing anonymous user
+        window.analytics.identify(anonymousId);
       }
     }
 
-    // Example of tracking a custom event on app load
     if (window.analytics) {
       window.analytics.track('Application Loaded');
     }
@@ -1433,11 +1393,12 @@ const App = () => {
   }, []);
 
 
+  // Internal navigation function (for internal app links)
   const navigate = (page, productId = null) => {
     let newHash = '';
     switch (page) {
       case 'home':
-        newHash = '';
+        newHash = ''; // Empty hash for home
         break;
       case 'products':
         newHash = '#/products';
@@ -1457,12 +1418,13 @@ const App = () => {
       default:
         newHash = '';
     }
-    window.location.hash = newHash;
+    window.location.hash = newHash; // Update hash, which will trigger handleNavigationAndTracking
   };
 
   const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
 
   return (
+    // Provide the cart context to all child components
     <CartContext.Provider value={{ cart, setCart }}>
       <div className="min-h-screen bg-gray-100 font-inter antialiased">
         <style>
@@ -1482,8 +1444,9 @@ const App = () => {
               case 'products':
                 return <ProductsPage navigate={navigate} />;
               case 'simulatedSearch':
-                return <SimulatedSearchEnginePage />;
+                return <SimulatedSearchEnginePage products={products} />; // Pass products to SimulatedSearchEnginePage
               case 'productDetail':
+                // ProductDetailPage now reads its own productId and UTMs from the URL
                 return <ProductDetailPage productId={selectedProductId} navigate={navigate} />;
               case 'cart':
                 return <CartPage navigate={navigate} />;

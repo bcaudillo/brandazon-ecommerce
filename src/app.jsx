@@ -3,6 +3,41 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 // --- Global Context for Cart Management ---
 const CartContext = createContext();
 
+// --- Helper to generate a consistent color based on a string (e.g., category) ---
+const stringToColor = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  let color = '#';
+  for (let i = 0; i < 3; i++) {
+    const value = (hash >> (i * 8)) & 0xFF;
+    color += ('00' + value.toString(16)).substr(-2);
+  }
+  return color;
+};
+
+// --- Helper to generate a unique base64 SVG placeholder image for each product ---
+const generateProductPlaceholderImage = (productName, category) => {
+  const bgColor = stringToColor(category || 'default'); // Use category for color
+  const textColor = '#FFFFFF'; // White text for better contrast
+
+  // Create a simple SVG string
+  const svgString = `
+    <svg width="300" height="300" xmlns="http://www.w3.org/2000/svg">
+      <rect width="300" height="300" fill="${bgColor}"/>
+      <text x="50%" y="40%" font-family="Arial, sans-serif" font-size="20" fill="${textColor}" text-anchor="middle" dominant-baseline="middle" font-weight="bold">
+        ${productName.length > 20 ? productName.substring(0, 17) + '...' : productName}
+      </text>
+      <text x="50%" y="60%" font-family="Arial, sans-serif" font-size="16" fill="${textColor}" text-anchor="middle" dominant-baseline="middle">
+        (${category || 'Misc'})
+      </text>
+    </svg>
+  `;
+
+  return 'data:image/svg+xml;base64,' + btoa(svgString);
+};
+
 // --- Helper to format product data for Segment events ---
 const formatProductForSegment = (product, quantity = 1, position = null) => {
   return {
@@ -28,7 +63,6 @@ const products = [
     name: 'Monopoly: 3rd Edition',
     description: 'The classic board game of property trading, updated with new tokens and rules for the 3rd edition.',
     price: 29.99,
-    imageUrl: 'https://placehold.co/300x300/F0F8FF/000000?text=Monopoly+3rd',
     category: 'Games',
     sku: 'GM-MONO-001',
     brand: 'Hasbro',
@@ -39,7 +73,6 @@ const products = [
     name: 'Uno Card Game',
     description: 'The timeless card game of matching colors and numbers. Easy to pick up, impossible to put down!',
     price: 9.99,
-    imageUrl: 'https://placehold.co/300x300/E6E6FA/000000?text=Uno+Cards',
     category: 'Games',
     sku: 'GM-UNO-001',
     brand: 'Mattel',
@@ -50,7 +83,6 @@ const products = [
     name: 'Special Facial Soap',
     description: 'Gentle and effective facial soap designed for all skin types, leaving your face feeling fresh and clean.',
     price: 12.50,
-    imageUrl: 'https://placehold.co/300x300/F5F5DC/000000?text=Facial+Soap',
     category: 'Beauty',
     sku: 'BT-SOAP-001',
     brand: 'PureSkin',
@@ -61,7 +93,6 @@ const products = [
     name: 'Fancy Hairbrush',
     description: 'Ergonomically designed hairbrush with natural bristles for smooth, tangle-free hair.',
     price: 18.00,
-    imageUrl: 'https://placehold.co/300x300/FFF0F5/000000?text=Hairbrush',
     category: 'Beauty',
     sku: 'BT-HBRUSH-001',
     brand: 'GlamLocks',
@@ -72,7 +103,6 @@ const products = [
     name: 'Labubu Blind Box Series 8',
     description: 'Discover the magic of Labubu with a surprise figure from Series 8. Collect them all!',
     price: 16.99,
-    imageUrl: 'https://placehold.co/300x300/ADD8E6/000000?text=Labubu+Series+8',
     category: 'Collectible',
     sku: 'COL-LABU-S8',
     brand: 'Popmart',
@@ -83,7 +113,6 @@ const products = [
     name: 'Labubu Ghost Hunter Plush',
     description: 'Cuddly Labubu plush in a spooky ghost hunter outfit. Perfect for fans and collectors.',
     price: 25.00,
-    imageUrl: 'https://placehold.co/300x300/B0E0E6/000000?text=Labubu+Ghost',
     category: 'Collectible',
     sku: 'COL-LABU-GH',
     brand: 'Popmart',
@@ -94,7 +123,6 @@ const products = [
     name: 'Labubu Plush Keychain',
     description: 'Take Labubu with you everywhere with this adorable plush keychain. A small but mighty collectible.',
     price: 9.50,
-    imageUrl: 'https://placehold.co/300x300/87CEEB/000000?text=Labubu+Keychain',
     category: 'Collectible',
     sku: 'COL-LABU-KC',
     brand: 'Popmart',
@@ -105,7 +133,6 @@ const products = [
     name: 'Electric Pour-over Kettle',
     description: 'Precision temperature control for the perfect pour-over coffee. Sleek design for any kitchen.',
     price: 59.99,
-    imageUrl: 'https://placehold.co/300x300/6495ED/000000?text=Pour-over+Kettle',
     category: 'Kitchen',
     sku: 'KCH-KETTLE-001',
     brand: 'BrewMaster',
@@ -116,7 +143,6 @@ const products = [
     name: 'Retro Gaming Mousepad',
     description: 'Large mousepad with a nostalgic retro gaming design. Smooth surface for optimal mouse control.',
     price: 14.99,
-    imageUrl: 'https://placehold.co/300x300/4682B4/000000?text=Retro+Mousepad',
     category: 'Electronics',
     sku: 'EL-MPAD-001',
     brand: 'GameGear',
@@ -127,7 +153,6 @@ const products = [
     name: 'AirPods Pro 3rd Gen',
     description: 'Immersive sound with active noise cancellation. The latest generation for superior audio experience.',
     price: 249.00,
-    imageUrl: 'https://placehold.co/300x300/5F9EA0/000000?text=AirPods+Pro',
     category: 'Electronics',
     sku: 'EL-AIRPODS-003',
     brand: 'Apple',
@@ -138,7 +163,6 @@ const products = [
     name: 'Nintendo Switch Lite',
     description: 'Compact, lightweight Nintendo Switch system dedicated to handheld play. Perfect for gaming on the go.',
     price: 199.99,
-    imageUrl: 'https://placehold.co/300x300/7FFFD4/000000?text=Switch+Lite',
     category: 'Electronics',
     sku: 'GM-SWITCHL-001',
     brand: 'Nintendo',
@@ -149,7 +173,6 @@ const products = [
     name: 'Collectible Ceramic Mug',
     description: 'High-quality ceramic mug with a unique design, perfect for collectors or daily use.',
     price: 11.99,
-    imageUrl: 'https://placehold.co/300x300/AFEEEE/000000?text=Ceramic+Mug',
     category: 'Collectible',
     sku: 'COL-MUG-001',
     brand: 'ArtisanCraft',
@@ -160,7 +183,6 @@ const products = [
     name: 'Summer Splash Towel',
     description: 'Ultra-absorbent and quick-drying towel, ideal for beach days, pool parties, or gym sessions.',
     price: 19.99,
-    imageUrl: 'https://placehold.co/300x300/00CED1/000000?text=Splash+Towel',
     category: 'Home Goods',
     sku: 'HG-TOWEL-001',
     brand: 'AquaDry',
@@ -171,7 +193,6 @@ const products = [
     name: 'Holiday Cookie Tin',
     description: 'A festive tin filled with an assortment of delicious holiday cookies. Great for gifting!',
     price: 15.00,
-    imageUrl: 'https://placehold.co/300x300/40E0D0/000000?text=Cookie+Tin',
     category: 'Food',
     sku: 'FD-COOKIE-001',
     brand: 'SweetTreats',
@@ -182,7 +203,6 @@ const products = [
     name: 'Wireless Pet Tracker',
     description: 'Keep track of your furry friend with this compact and reliable wireless pet tracker.',
     price: 45.00,
-    imageUrl: 'https://placehold.co/300x300/20B2AA/000000?text=Pet+Tracker',
     category: 'Pet Supplies',
     sku: 'PET-TRACK-001',
     brand: 'PetSafe',
@@ -193,7 +213,6 @@ const products = [
     name: 'Smart Home Hub Mini',
     description: 'Centralize your smart home devices with this mini hub. Control lights, thermostats, and more.',
     price: 79.99,
-    imageUrl: 'https://placehold.co/300x300/3CB371/000000?text=Smart+Hub',
     category: 'Smart Home',
     sku: 'SMART-HUB-001',
     brand: 'ConnectHome',
@@ -204,7 +223,6 @@ const products = [
     name: 'Mystery Snack Pack',
     description: 'A surprise assortment of delicious and unique snacks from around the world. What will you get?',
     price: 10.00,
-    imageUrl: 'https://placehold.co/300x300/98FB98/000000?text=Mystery+Snack',
     category: 'Food',
     sku: 'FD-SNACK-001',
     brand: 'GlobalBites',
@@ -215,7 +233,6 @@ const products = [
     name: 'Stainless Steel Tumbler',
     description: 'Double-walled insulated tumbler to keep your drinks hot or cold for hours. Perfect for on-the-go.',
     price: 22.99,
-    imageUrl: 'https://placehold.co/300x300/ADFF2F/000000?text=Steel+Tumbler',
     category: 'Home Goods',
     sku: 'HG-TUMBLER-001',
     brand: 'HydratePro',
@@ -226,7 +243,6 @@ const products = [
     name: 'Rechargeable Hand Warmer',
     description: 'Stay warm in cold weather with this portable and rechargeable hand warmer. Reusable and eco-friendly.',
     price: 28.00,
-    imageUrl: 'https://placehold.co/300x300/7CFC00/000000?text=Hand+Warmer',
     category: 'Outdoor',
     sku: 'OUT-HWARM-001',
     brand: 'WarmHands',
@@ -237,7 +253,6 @@ const products = [
     name: 'Super Soft Throw Blanket',
     description: 'Luxuriously soft throw blanket, perfect for cozying up on the couch or adding a touch of comfort to any room.',
     price: 35.00,
-    imageUrl: 'https://placehold.co/300x300/00FF7F/000000?text=Throw+Blanket',
     category: 'Home Goods',
     sku: 'HG-BLANKET-001',
     brand: 'CozyHome',
@@ -248,7 +263,6 @@ const products = [
     name: 'Labubu Golden Edition Figure',
     description: 'A rare and exclusive golden edition Labubu figure. A must-have for serious collectors!',
     price: 49.99,
-    imageUrl: 'https://placehold.co/300x300/32CD32/000000?text=Labubu+Golden',
     category: 'Collectible',
     sku: 'COL-LABU-GOLD',
     brand: 'Popmart',
@@ -259,7 +273,6 @@ const products = [
     name: 'Wireless Earbuds Gen2',
     description: 'Second generation wireless earbuds with enhanced sound quality and longer battery life.',
     price: 89.99,
-    imageUrl: 'https://placehold.co/300x300/228B22/000000?text=Earbuds+Gen2',
     category: 'Electronics',
     sku: 'EL-EARBUDS-002',
     brand: 'AudioPro',
@@ -270,7 +283,6 @@ const products = [
     name: 'LED Desk Lamp Pro',
     description: 'Adjustable LED desk lamp with multiple brightness and color temperature settings. Perfect for work or study.',
     price: 49.00,
-    imageUrl: 'https://placehold.co/300x300/008000/000000?text=Desk+Lamp+Pro',
     category: 'Home Office',
     sku: 'HO-LAMP-001',
     brand: 'BrightDesk',
@@ -281,7 +293,6 @@ const products = [
     name: 'Ergonomic Office Chair',
     description: 'Comfortable and supportive office chair designed for long hours of work. Promotes good posture.',
     price: 199.00,
-    imageUrl: 'https://placehold.co/300x300/006400/000000?text=Office+Chair',
     category: 'Home Office',
     sku: 'HO-OCHAIR-001',
     brand: 'ErgoSit',
@@ -292,7 +303,6 @@ const products = [
     name: 'Bluetooth Speaker Splash',
     description: 'Waterproof portable Bluetooth speaker with powerful sound. Ideal for outdoor adventures.',
     price: 65.00,
-    imageUrl: 'https://placehold.co/300x300/2E8B57/000000?text=Bluetooth+Speaker',
     category: 'Electronics',
     sku: 'EL-SPEAKER-001',
     brand: 'SoundWave',
@@ -303,7 +313,6 @@ const products = [
     name: 'Crystal Growing Kit',
     description: 'Fun and educational kit for growing your own beautiful crystals. A great science project for kids.',
     price: 20.00,
-    imageUrl: 'https://placehold.co/300x300/3CB371/000000?text=Crystal+Kit',
     category: 'Toys & Hobbies',
     sku: 'TH-CRYSTAL-001',
     brand: 'ScienceFun',
@@ -314,7 +323,6 @@ const products = [
     name: 'Build-Your-Own Robot Kit',
     description: 'Assemble your own functional robot with this engaging and educational kit. Learn about robotics.',
     price: 75.00,
-    imageUrl: 'https://placehold.co/300x300/66CDAA/000000?text=Robot+Kit',
     category: 'Toys & Hobbies',
     sku: 'TH-ROBOT-001',
     brand: 'RoboKids',
@@ -325,7 +333,6 @@ const products = [
     name: 'Color-Changing Mug',
     description: 'Watch your mug transform as you pour in hot liquids! A magical addition to your morning routine.',
     price: 14.00,
-    imageUrl: 'https://placehold.co/300x300/8FBC8F/000000?text=Color+Mug',
     category: 'Home Goods',
     sku: 'HG-MUG-001',
     brand: 'MagicMugs',
@@ -336,7 +343,6 @@ const products = [
     name: 'Fashion Face Mask (3-pack)',
     description: 'Stylish and comfortable reusable face masks. Comes in a pack of three with assorted designs.',
     price: 18.00,
-    imageUrl: 'https://placehold.co/300x300/90EE90/000000?text=Face+Masks',
     category: 'Apparel',
     sku: 'APP-MASK-001',
     brand: 'StyleWear',
@@ -347,7 +353,6 @@ const products = [
     name: 'Mini Projector HD',
     description: 'Compact and portable HD projector for movies, presentations, or gaming on the go.',
     price: 120.00,
-    imageUrl: 'https://placehold.co/300x300/9ACD32/000000?text=Mini+Projector',
     category: 'Electronics',
     sku: 'EL-PROJECTOR-001',
     brand: 'ViewMax',
@@ -358,7 +363,6 @@ const products = [
     name: 'Doggo Deluxe Bed',
     description: 'Plush and supportive bed for your beloved canine companion. Provides ultimate comfort.',
     price: 55.00,
-    imageUrl: 'https://placehold.co/300x300/6B8E23/000000?text=Dog+Bed',
     category: 'Pet Supplies',
     sku: 'PET-DBED-001',
     brand: 'ComfyPaws',
@@ -369,7 +373,6 @@ const products = [
     name: 'Cat Castle Tower',
     description: 'Multi-level cat tower with scratching posts, perches, and hideaways for endless feline fun.',
     price: 85.00,
-    imageUrl: 'https://placehold.co/300x300/808000/000000?text=Cat+Tower',
     category: 'Pet Supplies',
     sku: 'PET-CTOWER-001',
     brand: 'KittyKingdom',
@@ -380,7 +383,6 @@ const products = [
     name: 'All-Season Yoga Mat',
     description: 'Durable and comfortable yoga mat suitable for all seasons and various types of workouts.',
     price: 29.99,
-    imageUrl: 'https://placehold.co/300x300/BDB76B/000000?text=Yoga+Mat',
     category: 'Sports & Fitness',
     sku: 'SF-YOGA-001',
     brand: 'ZenFit',
@@ -391,7 +393,6 @@ const products = [
     name: 'Travel Packing Cubes',
     description: 'Organize your luggage with these versatile packing cubes. Maximize space and minimize wrinkles.',
     price: 24.99,
-    imageUrl: 'https://placehold.co/300x300/DAA520/000000?text=Packing+Cubes',
     category: 'Travel',
     sku: 'TRVL-PCUBE-001',
     brand: 'PackSmart',
@@ -402,7 +403,6 @@ const products = [
     name: 'Smart Plant Sensor',
     description: 'Monitor your plant\'s health with this smart sensor. Provides data on light, moisture, and nutrients.',
     price: 39.99,
-    imageUrl: 'https://placehold.co/300x300/FFD700/000000?text=Plant+Sensor',
     category: 'Smart Home',
     sku: 'SMART-PLANT-001',
     brand: 'GreenThumb',
@@ -413,7 +413,6 @@ const products = [
     name: 'Pop Culture Puzzle Set',
     description: 'Challenging puzzle set featuring iconic pop culture references. Great for movie and TV enthusiasts.',
     price: 22.00,
-    imageUrl: 'https://placehold.co/300x300/FFA500/000000?text=Pop+Puzzle',
     category: 'Games',
     sku: 'GM-PUZZLE-001',
     brand: 'NerdPuzzles',
@@ -424,7 +423,6 @@ const products = [
     name: 'Classic Denim Jacket',
     description: 'Timeless denim jacket, a versatile wardrobe staple for any season. Available in various washes.',
     price: 69.00,
-    imageUrl: 'https://placehold.co/300x300/FF8C00/000000?text=Denim+Jacket',
     category: 'Apparel',
     sku: 'APP-DENIM-001',
     brand: 'FashionCo',
@@ -435,7 +433,6 @@ const products = [
     name: 'Pocket Blender Pro',
     description: 'Compact and powerful personal blender, perfect for smoothies on the go. Rechargeable battery.',
     price: 39.99,
-    imageUrl: 'https://placehold.co/300x300/FF4500/000000?text=Pocket+Blender',
     category: 'Kitchen',
     sku: 'KCH-PBLEND-001',
     brand: 'BlendGo',
@@ -446,7 +443,6 @@ const products = [
     name: 'Microfiber Cleaning Slippers',
     description: 'Clean your floors effortlessly while you walk with these innovative microfiber cleaning slippers.',
     price: 15.00,
-    imageUrl: 'https://placehold.co/300x300/FF6347/000000?text=Cleaning+Slippers',
     category: 'Home Goods',
     sku: 'HG-SLIPPER-001',
     brand: 'CleanFeet',
@@ -457,7 +453,6 @@ const products = [
     name: 'Personal Blender Bottle',
     description: 'A convenient blender bottle for quick shakes and smoothies. Easy to clean and portable.',
     price: 25.00,
-    imageUrl: 'https://placehold.co/300x300/CD5C5C/000000?text=Blender+Bottle',
     category: 'Kitchen',
     sku: 'KCH-BOTTLE-001',
     brand: 'ShakeIt',
@@ -468,7 +463,6 @@ const products = [
     name: 'Wireless Charging Pad',
     description: 'Fast and efficient wireless charging pad for compatible smartphones and devices.',
     price: 29.00,
-    imageUrl: 'https://placehold.co/300x300/DC143C/000000?text=Charging+Pad',
     category: 'Electronics',
     sku: 'EL-CHARGE-001',
     brand: 'PowerUp',
@@ -479,7 +473,6 @@ const products = [
     name: 'Kitchen Chef Set',
     description: 'Professional-grade chef knife set with essential knives for every culinary task. High-quality steel.',
     price: 89.99,
-    imageUrl: 'https://placehold.co/300x300/B22222/000000?text=Knife+Set',
     category: 'Kitchen',
     sku: 'KCH-KNIFE-001',
     brand: 'ChefPro',
@@ -490,7 +483,6 @@ const products = [
     name: 'Instant Cold Brew Maker',
     description: 'Make delicious cold brew coffee at home in minutes with this easy-to-use instant maker.',
     price: 34.99,
-    imageUrl: 'https://placehold.co/300x300/8B0000/000000?text=Cold+Brew+Maker',
     category: 'Kitchen',
     sku: 'KCH-COLDBREW-001',
     brand: 'BrewQuick',
@@ -501,7 +493,6 @@ const products = [
     name: 'UV Sanitizing Box',
     description: 'Sterilize your phone, keys, and other small items with powerful UV-C light. Keep germs at bay.',
     price: 49.99,
-    imageUrl: 'https://placehold.co/300x300/A52A2A/000000?text=UV+Sanitizer',
     category: 'Health & Personal Care',
     sku: 'HPC-UVSAN-001',
     brand: 'CleanTech',
@@ -512,7 +503,6 @@ const products = [
     name: 'Portable Fire Pit',
     description: 'Enjoy cozy evenings outdoors with this compact and easy-to-assemble portable fire pit.',
     price: 79.00,
-    imageUrl: 'https://placehold.co/300x300/D2B48C/000000?text=Fire+Pit',
     category: 'Outdoor',
     sku: 'OUT-FIREPIT-001',
     brand: 'CampFire',
@@ -523,7 +513,6 @@ const products = [
     name: 'Commuter Insulated Backpack',
     description: 'Keep your food and drinks cool on the go with this stylish and insulated commuter backpack.',
     price: 59.00,
-    imageUrl: 'https://placehold.co/300x300/F4A460/000000?text=Insulated+Backpack',
     category: 'Travel',
     sku: 'TRVL-BPACK-001',
     brand: 'GoPack',
@@ -534,7 +523,6 @@ const products = [
     name: 'Labubu Vampire Bunny Plush',
     description: 'A special edition Labubu plush, dressed as a charming vampire bunny. Spooky and cute!',
     price: 28.00,
-    imageUrl: 'https://placehold.co/300x300/FF7F50/000000?text=Labubu+Vampire',
     category: 'Collectible',
     sku: 'COL-LABU-VAMP',
     brand: 'Popmart',
@@ -545,7 +533,6 @@ const products = [
     name: 'Labubu Sweet Dream Figure',
     description: 'A delightful Labubu figure depicting a sweet dream scene. Perfect for display.',
     price: 17.50,
-    imageUrl: 'https://placehold.co/300x300/FF69B4/000000?text=Labubu+Sweet+Dream',
     category: 'Collectible',
     sku: 'COL-LABU-SD',
     brand: 'Popmart',
@@ -556,7 +543,6 @@ const products = [
     name: 'Labubu Trick-or-Treat Series',
     description: 'Get into the Halloween spirit with the Labubu Trick-or-Treat blind box series. Collect all the ghoulishly cute figures!',
     price: 16.99,
-    imageUrl: 'https://placehold.co/300x300/FF1493/000000?text=Labubu+Trick',
     category: 'Collectible',
     sku: 'COL-LABU-TOT',
     brand: 'Popmart',
@@ -567,7 +553,6 @@ const products = [
     name: 'Marvel Collector Keychain',
     description: 'Officially licensed Marvel collectible keychain. Choose your favorite superhero!',
     price: 7.99,
-    imageUrl: 'https://placehold.co/300x300/C71585/000000?text=Marvel+Keychain',
     category: 'Collectible',
     sku: 'COL-MARVEL-KC',
     brand: 'Marvel',
@@ -578,7 +563,6 @@ const products = [
     name: 'Holiday Advent Calendar',
     description: 'Count down to the holidays with a surprise treat or toy each day. A festive way to celebrate!',
     price: 25.00,
-    imageUrl: 'https://placehold.co/300x300/DB7093/000000?text=Advent+Calendar',
     category: 'Holiday',
     sku: 'HOL-ADVENT-001',
     brand: 'FestiveFun',
@@ -586,8 +570,14 @@ const products = [
   }
 ];
 
+// Map product data to include generated image URLs
+const productsWithImages = products.map(product => ({
+  ...product,
+  imageUrl: generateProductPlaceholderImage(product.name, product.category)
+}));
+
 // Define a subset of products for the "Featured Products" section on the Home Page
-const featuredProducts = products.filter(product =>
+const featuredProducts = productsWithImages.filter(product =>
   product.name.toLowerCase().includes('labubu') || product.category === 'Collectible'
 );
 
@@ -598,7 +588,8 @@ const Header = ({ navigate, cartItemCount }) => {
   return (
     <header className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white p-4 shadow-md rounded-b-lg">
       <div className="container mx-auto flex justify-between items-center">
-        <h1 className="text-3xl font-bold font-inter cursor-pointer" onClick={() => navigate('home')}>Brandazon</h1>
+        {/* Brandazon logo now navigates to Moogle */}
+        <h1 className="text-3xl font-bold font-inter cursor-pointer" onClick={() => navigate('simulatedSearch')}>Brandazon</h1>
         <nav className="flex items-center space-x-6">
           <button
             onClick={() => navigate('home')}
@@ -654,10 +645,10 @@ const PartnershipBanner = () => {
     <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white py-8 px-4 rounded-xl shadow-lg mb-12 text-center transform transition duration-500 hover:scale-102">
       <div className="container mx-auto flex flex-col md:flex-row items-center justify-center gap-6">
         <img
-          src="https://placehold.co/150x150/FFFFFF/FF69B4?text=Labubu+x+Popmart"
+          src={generateProductPlaceholderImage("Labubu x Popmart", "Partnership")} // Dynamic placeholder for banner
           alt="Labubu x Popmart Partnership"
           className="w-32 h-32 object-contain rounded-full border-4 border-white shadow-md"
-          onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/150x150/CCCCCC/000000?text=Partnership`; }}
+          onError={(e) => { e.target.onerror = null; e.target.src = generateProductPlaceholderImage("Partnership", "Partnership"); }}
         />
         <div>
           <h2 className="text-4xl md:text-5xl font-extrabold mb-2 leading-tight">
@@ -732,7 +723,7 @@ const ProductCard = ({ product, navigate, position }) => {
         src={product.imageUrl}
         alt={product.name}
         className="w-full h-48 object-cover rounded-t-xl"
-        onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/300x300/CCCCCC/000000?text=Image+Not+Found`; }}
+        onError={(e) => { e.target.onerror = null; e.target.src = generateProductPlaceholderImage(product.name, product.category); }}
       />
       <div className="p-5 flex-grow flex flex-col justify-between">
         <div>
@@ -788,7 +779,7 @@ const ProductsPage = ({ navigate }) => {
     <div className="container mx-auto p-6">
       <h2 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">All Products</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        {products.map((product, index) => (
+        {productsWithImages.map((product, index) => ( // Use productsWithImages here
           <ProductCard key={product.id} product={product} navigate={navigate} position={index + 1} />
         ))}
       </div>
@@ -800,15 +791,37 @@ const ProductDetailPage = ({ productId, navigate }) => {
   const [utmParams, setUtmParams] = useState(null); // Keep this state for UTMs
   const { cart, setCart } = useContext(CartContext);
 
-  const product = products.find(p => p.id === productId);
+  const product = productsWithImages.find(p => p.id === productId); // Use productsWithImages here
+
+  // Function to get related products
+  const getRelatedProducts = (currentProductId, currentProductCategory) => {
+    const related = productsWithImages.filter(p =>
+      p.id !== currentProductId && p.category === currentProductCategory
+    );
+
+    // Shuffle and take up to 4 related products
+    const shuffledRelated = related.sort(() => 0.5 - Math.random());
+    let selectedRelated = shuffledRelated.slice(0, 4);
+
+    // If not enough related products, fill with random ones from the whole list
+    if (selectedRelated.length < 4) {
+      const allOtherProducts = productsWithImages.filter(p => p.id !== currentProductId && !selectedRelated.some(rp => rp.id === p.id));
+      const shuffledOthers = allOtherProducts.sort(() => 0.5 - Math.random());
+      selectedRelated = [...selectedRelated, ...shuffledOthers].slice(0, 4);
+    }
+    return selectedRelated;
+  };
+
+  const relatedProducts = product ? getRelatedProducts(product.id, product.category) : [];
+
 
   useEffect(() => {
     // Campaign Attribution Recorded (if UTMs are present) - Now triggered by the ProductDetailPage loading
     // and checking for UTMs, which is a page-specific attribution, not a general "track" event on mount.
     // This is a special case where the "track" event is directly related to the URL state.
     if (window.analytics && product) {
-      const hashParts = window.location.hash.split('?');
-      const queryString = hashParts.length > 1 ? hashParts[1] : '';
+      // Now parse UTMs from window.location.search (before the hash)
+      const queryString = window.location.search;
       const params = new URLSearchParams(queryString);
 
       const parsedUtm = {};
@@ -833,10 +846,13 @@ const ProductDetailPage = ({ productId, navigate }) => {
 
   if (!product) {
     return (
-      <div className="container mx-auto p-6 text-center text-red-500">
-        <h2 className="text-3xl font-bold mb-4">Product Not Found</h2>
-        <button onClick={() => navigate('home')} className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">
-          Back to Home
+      <div className="container mx-auto p-6 text-center text-red-600 text-xl font-semibold">
+        Product not found!
+        <button
+          onClick={() => navigate('products')}
+          className="mt-4 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out"
+        >
+          Back to Products
         </button>
       </div>
     );
@@ -855,193 +871,241 @@ const ProductDetailPage = ({ productId, navigate }) => {
     if (window.analytics) {
       window.analytics.track('Product Added', {
         cart_id: 'brandazon_cart_id', // Placeholder cart ID
-        products: [formatProductForSegment(product, 1)] // Always add 1 unit per click
+        products: [formatProductForSegment(product, 1)]
       });
     }
   };
 
   return (
     <div className="container mx-auto p-6">
-      <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col md:flex-row items-center md:items-start gap-8">
-        <img
-          src={product.imageUrl}
-          alt={product.name}
-          className="w-full md:w-1/2 lg:w-1/3 h-auto object-cover rounded-lg shadow-md"
-          onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/400x400/CCCCCC/000000?text=Image+Not+Found`; }}
-        />
-        <div className="flex-grow">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col md:flex-row items-center p-8 gap-8">
+        <div className="md:w-1/2 flex justify-center">
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="w-full max-w-md h-auto object-contain rounded-lg shadow-md"
+            onError={(e) => { e.target.onerror = null; e.target.src = generateProductPlaceholderImage(product.name, product.category); }}
+          />
+        </div>
+        <div className="md:w-1/2 flex flex-col justify-center">
           <h2 className="text-4xl font-extrabold text-gray-900 mb-4">{product.name}</h2>
           <p className="text-gray-700 text-lg mb-6">{product.description}</p>
-          <p className="text-4xl font-bold text-purple-700 mb-6">${product.price.toFixed(2)}</p>
+          <p className="text-5xl font-bold text-purple-700 mb-6">${product.price.toFixed(2)}</p>
+
+          <div className="flex space-x-4 mb-6">
+            <button
+              onClick={handleAddToCart}
+              className="bg-purple-600 text-white py-3 px-6 rounded-lg text-xl font-semibold hover:bg-purple-700 transition duration-300 ease-in-out shadow-md hover:shadow-lg flex-grow"
+            >
+              Add to Cart
+            </button>
+            {/* Removed "Remove from Cart" button from here */}
+          </div>
+
           <button
-            onClick={handleAddToCart}
-            className="bg-purple-600 text-white py-3 px-8 rounded-lg text-xl font-semibold hover:bg-purple-700 transition duration-300 ease-in-out shadow-lg hover:shadow-xl"
+            onClick={() => navigate('products')}
+            className="mt-4 bg-gray-200 text-gray-800 py-3 px-6 rounded-lg text-lg font-semibold hover:bg-gray-300 transition duration-300 ease-in-out shadow-md hover:shadow-lg"
           >
-            Add to Cart
+            ← Back to All Products
           </button>
-          <button
-            onClick={() => navigate('home')}
-            className="ml-4 bg-gray-300 text-gray-800 py-3 px-8 rounded-lg text-xl font-semibold hover:bg-gray-400 transition duration-300 ease-in-out shadow-lg hover:shadow-xl"
-          >
-            Back to Home
-          </button>
+
+          {utmParams && (
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-semibold text-blue-800 mb-2">Campaign Attribution Details:</h3>
+              <ul className="list-disc list-inside text-blue-700">
+                {Object.entries(utmParams).map(([key, value]) => (
+                  <li key={key}><strong>{key.replace('utm_', '').replace('_', ' ')}:</strong> {value}</li>
+                ))}
+              </ul>
+              <p className="text-sm text-blue-600 mt-2">
+                This information was captured from the URL query parameters.
+              </p>
+            </div>
+          )}
         </div>
       </div>
+
+      {relatedProducts.length > 0 && (
+        <div className="mt-12">
+          <h3 className="text-3xl font-bold text-gray-900 mb-6 text-center">Related Products You Might Like</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {relatedProducts.map(relatedProduct => (
+              <ProductCard key={relatedProduct.id} product={relatedProduct} navigate={navigate} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 const CartPage = ({ navigate }) => {
   const { cart, setCart } = useContext(CartContext);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
-  // Removed Cart Viewed event from useEffect
-  // It's generally better to track Cart Viewed as part of a page() call or
-  // only when the user explicitly interacts with the cart (e.g., clicks a "View Cart" button)
+  // Calculate total price
+  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const updateQuantity = (id, delta) => {
-    const item = cart.find(i => i.id === id);
-    if (!item) return;
+  const handleUpdateQuantity = (productId, delta) => {
+    const existingItem = cart.find(item => item.id === productId);
+    if (!existingItem) return;
 
-    const newQuantity = item.quantity + delta;
+    const newQuantity = existingItem.quantity + delta;
+
     if (newQuantity <= 0) {
-      // Product Removed event
+      // Remove item if quantity goes to 0 or less
+      setCart(cart.filter(item => item.id !== productId));
       if (window.analytics) {
         window.analytics.track('Product Removed', {
           cart_id: 'brandazon_cart_id',
-          products: [formatProductForSegment(item, item.quantity)] // Track original quantity being removed
+          products: [formatProductForSegment(existingItem, 1)]
         });
       }
-      setCart(cart.filter(i => i.id !== id));
     } else {
-      setCart(cart.map(i =>
-        i.id === id ? { ...i, quantity: newQuantity } : i
+      setCart(cart.map(item =>
+        item.id === productId ? { ...item, quantity: newQuantity } : item
       ));
-      if (delta > 0) {
-        // Product Added event (for quantity increase)
-        if (window.analytics) {
+      // Product Added/Removed for quantity changes
+      if (window.analytics) {
+        if (delta > 0) {
           window.analytics.track('Product Added', {
             cart_id: 'brandazon_cart_id',
-            products: [formatProductForSegment(item, 1)] // Track 1 unit added
+            products: [formatProductForSegment(existingItem, delta)]
           });
-        }
-      } else {
-        // Product Removed event (for quantity decrease)
-        if (window.analytics) {
+        } else {
           window.analytics.track('Product Removed', {
             cart_id: 'brandazon_cart_id',
-            products: [formatProductForSegment(item, 1)] // Track 1 unit removed
+            products: [formatProductForSegment(existingItem, Math.abs(delta))]
           });
         }
       }
     }
   };
 
-  const removeItem = (id) => {
-    const itemToRemove = cart.find(item => item.id === id);
+  const handleRemoveItem = (productId) => {
+    const itemToRemove = cart.find(item => item.id === productId);
     if (itemToRemove) {
-      // Product Removed event (for full item removal)
+      setCart(cart.filter(item => item.id !== productId));
+      // Product Removed event for full removal
       if (window.analytics) {
         window.analytics.track('Product Removed', {
           cart_id: 'brandazon_cart_id',
           products: [formatProductForSegment(itemToRemove, itemToRemove.quantity)]
         });
       }
-      setCart(cart.filter(item => item.id !== id));
     }
   };
 
-  const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
   const handleCheckout = () => {
-    // Checkout Started event
+    // Order Completed event
     if (window.analytics) {
-      window.analytics.track('Checkout Started', {
-        order_id: `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000)}`, // Generate a unique order_id
-        affiliation: 'Brandazon Online Store',
-        value: totalAmount,
-        revenue: totalAmount, // Assuming no separate discounts/taxes for simplicity here
-        shipping: 0, // Placeholder
-        tax: 0,      // Placeholder
-        discount: 0, // Placeholder
+      window.analytics.track('Order Completed', {
+        order_id: `order_${Date.now()}`, // Unique order ID
+        affiliation: 'Brandazon',
+        total: totalPrice,
+        revenue: totalPrice,
+        shipping: 0, // Assuming free shipping for simplicity
+        tax: 0, // Assuming no tax for simplicity
+        discount: 0, // Assuming no discount for simplicity
         currency: 'USD',
         products: cart.map(item => formatProductForSegment(item, item.quantity))
       });
     }
-    navigate('checkout');
+    setCart([]); // Clear cart after checkout
+    setShowConfirmation(true); // Show confirmation message
+  };
+
+  const handleCloseConfirmation = () => {
+    setShowConfirmation(false);
+    navigate('home'); // Go back to home after confirmation
   };
 
   return (
     <div className="container mx-auto p-6">
       <h2 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">Your Shopping Cart</h2>
+
       {cart.length === 0 ? (
-        <div className="text-center text-gray-600 text-xl">
-          Your cart is empty. <button onClick={() => navigate('home')} className="text-blue-600 hover:underline">Start shopping!</button>
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+          <p className="text-gray-600 text-xl mb-4">Your cart is empty.</p>
+          <button
+            onClick={() => navigate('products')}
+            className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out"
+          >
+            Start Shopping
+          </button>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-lg p-8">
-          <div className="space-y-6">
+          <div className="space-y-6 mb-8">
             {cart.map(item => (
               <div key={item.id} className="flex items-center justify-between border-b pb-4 last:border-b-0 last:pb-0">
                 <div className="flex items-center space-x-4">
                   <img
                     src={item.imageUrl}
                     alt={item.name}
-                    className="w-20 h-20 object-cover rounded-lg shadow-sm"
-                    onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/80x80/CCCCCC/000000?text=Img`; }}
+                    className="w-24 h-24 object-cover rounded-md shadow-sm"
+                    onError={(e) => { e.target.onerror = null; e.target.src = generateProductPlaceholderImage(item.name, item.category); }}
                   />
                   <div>
                     <h3 className="text-xl font-semibold text-gray-800">{item.name}</h3>
-                    <p className="text-gray-600">${item.price.toFixed(2)}</p>
+                    <p className="text-gray-600">${item.price.toFixed(2)} each</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className="flex items-center border border-gray-300 rounded-md">
+                  <div className="flex items-center border border-gray-300 rounded-lg">
                     <button
-                      onClick={() => updateQuantity(item.id, -1)}
-                      className="px-3 py-1 text-gray-700 hover:bg-gray-100 rounded-l-md"
+                      onClick={() => handleUpdateQuantity(item.id, -1)}
+                      className="px-3 py-1 text-gray-700 hover:bg-gray-100 rounded-l-lg"
                     >
                       -
                     </button>
-                    <span className="px-3 py-1 border-x border-gray-300">{item.quantity}</span>
+                    <span className="px-3 py-1 border-x border-gray-300 text-gray-800">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.id, 1)}
-                      className="px-3 py-1 text-gray-700 hover:bg-gray-100 rounded-r-md"
+                      onClick={() => handleUpdateQuantity(item.id, 1)}
+                      className="px-3 py-1 text-gray-700 hover:bg-gray-100 rounded-r-lg"
                     >
                       +
                     </button>
                   </div>
-                  <p className="text-xl font-bold text-purple-700 w-24 text-right">${(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="text-lg font-bold text-purple-700 w-24 text-right">${(item.price * item.quantity).toFixed(2)}</p>
                   <button
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => handleRemoveItem(item.id)}
                     className="text-red-500 hover:text-red-700 transition duration-300"
-                    title="Remove item"
+                    aria-label={`Remove ${item.name}`}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
                 </div>
               </div>
             ))}
           </div>
-          <div className="flex justify-end items-center mt-8 pt-6 border-t border-gray-200">
+
+          <div className="flex justify-end items-center mt-8 pt-4 border-t-2 border-gray-200">
             <p className="text-2xl font-bold text-gray-900 mr-4">Total:</p>
-            <p className="text-3xl font-extrabold text-purple-800">${totalAmount.toFixed(2)}</p>
+            <p className="text-3xl font-extrabold text-purple-800">${totalPrice.toFixed(2)}</p>
           </div>
-          <div className="flex justify-end mt-6 space-x-4">
+
+          <button
+            onClick={handleCheckout}
+            className="w-full mt-8 bg-green-600 text-white py-4 px-6 rounded-lg text-2xl font-semibold hover:bg-green-700 transition duration-300 ease-in-out shadow-lg hover:shadow-xl"
+          >
+            Proceed to Checkout
+          </button>
+        </div>
+      )}
+
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm mx-auto">
+            <h3 className="text-3xl font-bold text-green-700 mb-4">Order Confirmed!</h3>
+            <p className="text-gray-700 text-lg mb-6">Thank you for your purchase. Your order has been placed successfully.</p>
             <button
-              onClick={() => navigate('home')}
-              className="bg-gray-300 text-gray-800 py-3 px-6 rounded-lg text-lg font-semibold hover:bg-gray-400 transition duration-300 ease-in-out shadow-md hover:shadow-lg"
+              onClick={handleCloseConfirmation}
+              className="bg-blue-600 text-white py-2 px-5 rounded-lg text-lg font-semibold hover:bg-blue-700 transition duration-300"
             >
               Continue Shopping
-            </button>
-            <button
-              onClick={handleCheckout}
-              disabled={cart.length === 0}
-              className={`py-3 px-6 rounded-lg text-lg font-semibold transition duration-300 ease-in-out shadow-md hover:shadow-lg
-                  ${cart.length === 0 ? 'bg-gray-400 text-gray-600 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-            >
-              Proceed to Checkout
             </button>
           </div>
         </div>
@@ -1050,416 +1114,352 @@ const CartPage = ({ navigate }) => {
   );
 };
 
-const CheckoutPage = ({ navigate }) => {
-  const { cart, setCart } = useContext(CartContext);
-  const [orderPlaced, setOrderPlaced] = useState(false);
-  const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-  useEffect(() => {
-    // Placeholder for user ID - In a real app, this would come from an auth system
-    const userId = 'user_12345';
-    const userTraits = {
-      email: 'user@example.com',
-      name: 'John Doe',
-    };
-
-    // Identify call on checkout page load (or when user logs in/is identified)
-    if (window.analytics) {
-      window.analytics.identify(userId, userTraits);
-    }
-
-    // Removed Checkout Step Viewed event from useEffect
-  }, []); // Only on mount
-
-  const handlePlaceOrder = () => {
-    const orderId = `ORDER-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const revenue = totalAmount;
-    const shipping = 0;
-    const tax = 0;
-    const discount = 0;
-    const coupon = 'N/A';
-
-    // Payment Info Entered event (simulated before Order Completed)
-    if (window.analytics) {
-      window.analytics.track('Payment Info Entered', {
-        checkout_id: 'brandazon_checkout_id',
-        order_id: orderId,
-        payment_method: 'Credit Card' // Placeholder
-      });
-    }
-
-    // Order Completed event
-    if (window.analytics) {
-      window.analytics.track('Order Completed', {
-        checkout_id: 'brandazon_checkout_id',
-        order_id: orderId,
-        affiliation: 'Brandazon Online Store',
-        total: totalAmount + shipping + tax - discount,
-        subtotal: totalAmount,
-        revenue: revenue,
-        shipping: shipping,
-        tax: tax,
-        discount: discount,
-        coupon: coupon,
-        currency: 'USD',
-        products: cart.map(item => formatProductForSegment(item, item.quantity))
-      });
-    }
-
-    setOrderPlaced(true);
-    setCart([]); // Clear cart after purchase
-  };
-
-  return (
-    <div className="container mx-auto p-6">
-      <h2 className="text-4xl font-extrabold text-gray-900 mb-8 text-center">Checkout</h2>
-      <div className="bg-white rounded-xl shadow-lg p-8">
-        {orderPlaced ? (
-          <div className="text-center text-green-700 text-2xl font-semibold">
-            <p className="mb-4">🎉 Your order has been placed successfully!</p>
-            <p>Thank you for shopping with Brandazon!</p>
-            <button
-              onClick={() => navigate('home')}
-              className="mt-8 bg-purple-600 text-white py-3 px-6 rounded-lg text-lg font-semibold hover:bg-purple-700 transition duration-300 ease-in-out shadow-md hover:shadow-lg"
-            >
-              Continue Shopping
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">Order Summary</h3>
-              {cart.length === 0 ? (
-                <p className="text-gray-600">Your cart is empty. Please add items before checking out.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {cart.map(item => (
-                    <li key={item.id} className="flex justify-between text-gray-700 text-lg">
-                      <span>{item.name} (x{item.quantity})</span>
-                      <span>${(item.price * item.quantity).toFixed(2)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
-                <p className="text-2xl font-bold text-gray-900 mr-4">Total:</p>
-                <p className="text-3xl font-extrabold text-purple-800">${totalAmount.toFixed(2)}</p>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">Shipping Information</h3>
-              <form className="space-y-4">
-                <div>
-                  <label htmlFor="fullName" className="block text-gray-700 text-sm font-bold mb-2">Full Name</label>
-                  <input type="text" id="fullName" className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="John Doe" required />
-                </div>
-                <div>
-                  <label htmlFor="address" className="block text-gray-700 text-sm font-bold mb-2">Address</label>
-                  <input type="text" id="address" className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="123 Main St" required />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="city" className="block text-gray-700 text-sm font-bold mb-2">City</label>
-                    <input type="text" id="city" className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Anytown" required />
-                  </div>
-                  <div>
-                    <label htmlFor="zip" className="block text-gray-700 text-sm font-bold mb-2">Zip Code</label>
-                    <input type="text" id="zip" className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="12345" required />
-                  </div>
-                </div>
-              </form>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">Payment Information</h3>
-              <form className="space-y-4">
-                <div>
-                  <label htmlFor="cardNumber" className="block text-gray-700 text-sm font-bold mb-2">Card Number</label>
-                  <input type="text" id="cardNumber" className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="**** **** **** ****" required />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="expiryDate" className="block text-gray-700 text-sm font-bold mb-2">Expiry Date (MM/YY)</label>
-                    <input type="text" id="expiryDate" className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="12/25" required />
-                  </div>
-                  <div>
-                    <label htmlFor="cvv" className="block text-gray-700 text-sm font-bold mb-2">CVV</label>
-                    <input type="text" id="cvv" className="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="123" required />
-                  </div>
-                </div>
-              </form>
-            </div>
-
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => navigate('cart')}
-                className="bg-gray-300 text-gray-800 py-3 px-6 rounded-lg text-lg font-semibold hover:bg-gray-400 transition duration-300 ease-in-out shadow-md hover:shadow-lg"
-              >
-                Back to Cart
-              </button>
-              <button
-                onClick={handlePlaceOrder}
-                disabled={cart.length === 0}
-                className={`py-3 px-6 rounded-lg text-lg font-semibold transition duration-300 ease-in-out shadow-md hover:shadow-lg
-                  ${cart.length === 0 ? 'bg-gray-400 text-gray-600 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-            >
-              Place Order
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  </div>
-);
-};
-
-const SimulatedSearchEnginePage = ({ products }) => {
+const SimulatedSearchEnginePage = ({ navigate }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
 
-  useEffect(() => {
-    // Page view for Simulated Search Engine (this is a page, not a track event on mount)
-    if (window.analytics) {
-      window.analytics.page('Marketing', 'Simulated Search Engine Page', {
-        path: window.location.pathname + window.location.hash,
-        url: window.location.href
-      });
-    }
-  }, []);
+  // Static UTM parameters as per user request
+  const utmSource = 'moogle';
+  const utmMedium = 'organic';
+  const utmCampaign = 'default_search';
 
-  const handleAdClick = () => {
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    let targetProductId = 'labubu-blind-box-series-8'; // Default Labubu product
+  const handleSearch = () => {
+    let productToDisplay = null;
 
-    const matchedProduct = products.find(p =>
-      p.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-      p.description.toLowerCase().includes(lowerCaseSearchTerm) ||
-      p.category.toLowerCase().includes(lowerCaseSearchTerm)
+    // Try to find a product that matches the search term
+    const matchedProducts = productsWithImages.filter(p =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (matchedProduct) {
-      targetProductId = matchedProduct.id;
+    if (matchedProducts.length > 0) {
+      // Pick a random product from the matched list
+      const randomIndex = Math.floor(Math.random() * matchedProducts.length);
+      productToDisplay = matchedProducts[randomIndex];
+    } else {
+      // If no match, pick a random product from the entire list
+      const randomIndex = Math.floor(Math.random() * productsWithImages.length);
+      productToDisplay = productsWithImages[randomIndex];
     }
 
-    // Products Searched event (triggered by click)
+    // Construct the query string with static UTM parameters
+    const queryParams = new URLSearchParams();
+    queryParams.append('utm_source', utmSource);
+    queryParams.append('utm_medium', utmMedium);
+    queryParams.append('utm_campaign', utmCampaign);
+
+    // --- For DISPLAY PURPOSES ONLY in Moogle search results ---
+    const simulatedBrandazonDomain = 'https://www.brandazon.com';
+    const simulatedProductUrlForDisplay = `${simulatedBrandazonDomain}/product/${productToDisplay.id}?${queryParams.toString()}`;
+
+    setSearchResults([{
+      ...productToDisplay,
+      simulatedUrl: simulatedProductUrlForDisplay // This is the URL displayed in the search result
+    }]);
+
+    // Search Results Viewed event
     if (window.analytics) {
-      window.analytics.track('Products Searched', {
-        query: searchTerm.trim()
+      window.analytics.track('Search Results Viewed', {
+        query: searchTerm, // Still log the actual search term for analytics
+        results: [{ product_id: productToDisplay.id, product_name: productToDisplay.name }],
+        utm_source: utmSource,
+        utm_medium: utmMedium,
+        utm_campaign: utmCampaign
       });
     }
+  };
 
-    // Construct the query parameters string
-    const queryParams = new URLSearchParams();
-    queryParams.append('utm_source', 'google');
-    queryParams.append('utm_medium', 'cpc');
-    queryParams.append('utm_campaign', 'labubu_launch_q3');
-    queryParams.append('utm_content', 'search_ad_banner');
-    queryParams.append('utm_term', searchTerm.trim() || 'default_search_term');
-    queryParams.append('gad_source', '1');
-    queryParams.append('gad_campaignid', '22690431292');
-    queryParams.append('gbraid', '0AAAAApZoGaVNZnuRe968aNy6x-Z4Y9TI6');
-    queryParams.append('gclid', 'CjwKCAjw1ozEBhAdEiwAn9qbzT99fJagIv7foNLlQnHysh63ZqtvIRL_hVhVDsUw_948_5Hs1WQu-BoCZCYQAvD_BwE'); // Example GCLID
-
-    const baseUrl = window.location.origin + window.location.pathname;
-    const constructedUrl = `${baseUrl}#/product/${targetProductId}?${queryParams.toString()}`;
-
-    window.location.href = constructedUrl;
+  const handleAdClick = (product) => {
+    // Product Clicked event (simulating ad click)
+    if (window.analytics) {
+      window.analytics.track('Product Clicked', {
+        ...formatProductForSegment(product), // Use existing formatter
+        list: 'Simulated Search Results',
+        position: searchResults.findIndex(p => p.id === product.id) + 1,
+        utm_source: utmSource,
+        utm_medium: utmMedium,
+        utm_campaign: utmCampaign
+      });
+    }
+    // Navigate to the product detail page, which will then read the new URL
+    // The navigate function will now handle constructing the full URL and pushing state.
+    navigate('productDetail', product.id, { fromMoogle: true }); // Pass the flag
   };
 
   return (
-    <div className="container mx-auto p-6 flex flex-col items-center justify-center min-h-[60vh]">
-      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-2xl text-center">
-        <h2 className="text-4xl font-extrabold text-gray-900 mb-8">Simulate a Search Engine Ad</h2>
-        <p className="text-gray-700 text-lg mb-6">
-          Type a search query below and click "Simulate Ad Click" to see how UTM parameters would be passed to Brandazon.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+    <div className="container mx-auto p-6 min-h-[calc(100vh-120px)] flex flex-col justify-center items-center">
+      <h2 className="text-5xl font-extrabold text-gray-900 mb-8 text-center">
+        <span className="text-blue-600">M</span>
+        <span className="text-red-500">o</span>
+        <span className="text-yellow-500">o</span>
+        <span className="text-blue-600">g</span>
+        <span className="text-green-600">l</span>
+        <span className="text-red-500">e</span> Search
+      </h2>
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8 w-full max-w-2xl">
+        <div className="flex flex-col md:flex-row gap-4 mb-4">
           <input
             type="text"
-            className="flex-grow shadow appearance-none border rounded-lg py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="e.g., Labubu, Earbuds, Monopoly"
+            placeholder="Search Moogle (e.g., Labubu, Hairbrush, Kettle)"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => { if (e.key === 'Enter') handleAdClick(); }}
+            className="flex-grow p-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
           />
           <button
-            onClick={handleAdClick}
-            className="bg-blue-600 text-white py-3 px-8 rounded-lg text-lg font-semibold hover:bg-blue-700 transition duration-300 ease-in-out shadow-lg hover:shadow-xl"
+            onClick={handleSearch}
+            className="bg-blue-600 text-white py-3 px-6 rounded-full font-semibold hover:bg-blue-700 transition duration-300 ease-in-out shadow-md"
           >
-            Simulate Ad Click
+            Moogle Search
           </button>
         </div>
-        <p className="text-gray-500 text-sm">
-          (This will change the URL in your browser's address bar and navigate to the product page.)
-        </p>
+        <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+          <p className="font-semibold">Simulated Ad Parameters (Internal):</p>
+          <ul className="list-disc list-inside text-sm">
+            <li><strong>UTM Source:</strong> {utmSource}</li>
+            <li><strong>UTM Medium:</strong> {utmMedium}</li>
+            <li><strong>UTM Campaign:</strong> {utmCampaign}</li>
+          </ul>
+          <p className="text-sm mt-2">
+            Type a search term to find a matching product, or get a random one if no match.
+            Click the ad to visit the product page with these UTMs in the URL.
+          </p>
+        </div>
       </div>
+
+      {searchResults.length > 0 && (
+        <div className="mt-8 w-full max-w-2xl">
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">Simulated Moogle Ad Result (Click to visit page with UTMs)</h3>
+          <div className="space-y-4">
+            {searchResults.map(product => (
+              <div
+                key={product.id}
+                className="bg-white rounded-lg shadow-md p-4 border border-blue-200 hover:shadow-xl transition duration-300 cursor-pointer"
+                onClick={() => handleAdClick(product)}
+              >
+                <div className="flex items-center space-x-4">
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="w-20 h-20 object-cover rounded-md"
+                    onError={(e) => { e.target.onerror = null; e.target.src = generateProductPlaceholderImage(product.name, product.category); }}
+                  />
+                  <div>
+                    <h4 className="text-xl font-semibold text-blue-700 hover:underline">{product.name}</h4>
+                    <p className="text-sm text-green-700 mt-1">{product.simulatedUrl}</p> {/* Display the simulated Brandazon URL */}
+                    <p className="text-gray-600 text-sm">{product.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 
 // --- Main App Component ---
-const App = () => {
-  // We'll manage routing based on window.location.hash directly
-  const [currentPage, setCurrentPage] = useState('home');
-  const [selectedProductId, setSelectedProductId] = useState(null);
+function App() {
+  // Set initial page to 'simulatedSearch'
+  const [currentPage, setCurrentPage] = useState('simulatedSearch');
+  const [currentProductId, setCurrentProductId] = useState(null);
   const [cart, setCart] = useState([]);
 
-  // Effect to handle initial page load and hash changes for routing and Segment page calls
-  useEffect(() => {
-    const handleNavigationAndTracking = () => {
-      const hash = window.location.hash;
-      let pageName = '';
-      let pageCategory = '';
-      let currentProductId = null; // To store product ID if on product detail page
+  // Function to handle navigation and Segment page calls
+  const navigate = (page, productId = null, options = {}) => {
+    setCurrentPage(page);
+    setCurrentProductId(productId);
 
-      if (hash.startsWith('#/product/')) {
-        const productIdFromHash = hash.split('?')[0].replace('#/product/', '');
-        setCurrentPage('productDetail');
-        currentProductId = productIdFromHash;
-        setSelectedProductId(productIdFromHash);
-        pageName = 'Product Detail Page';
-        pageCategory = 'E-commerce';
-      } else if (hash === '#/products') {
-        setCurrentPage('products');
-        setSelectedProductId(null);
-        pageName = 'All Products Page';
-        pageCategory = 'E-commerce';
-      } else if (hash === '#/simulatedSearch') {
-        setCurrentPage('simulatedSearch');
-        setSelectedProductId(null);
-        pageName = 'Simulated Search Engine Page';
-        pageCategory = 'Marketing';
-      } else if (hash === '#/cart') {
-        setCurrentPage('cart');
-        setSelectedProductId(null);
-        pageName = 'Cart Page';
-        pageCategory = 'E-commerce';
-      } else if (hash === '#/checkout') {
-        setCurrentPage('checkout');
-        setSelectedProductId(null);
-        pageName = 'Checkout Page';
-        pageCategory = 'E-commerce';
-      }
-      else {
-        setCurrentPage('home');
-        setSelectedProductId(null);
-        pageName = 'Home Page';
-        pageCategory = 'E-commerce';
-      }
+    let path = '';
+    let properties = {};
+    // Start with a clean base URL for constructing the new URL
+    const newUrl = new URL(window.location.origin + window.location.pathname);
 
-      // Segment Page call for every route change, including initial load after refresh
-      if (window.analytics) {
-        window.analytics.page(pageCategory, pageName, {
-          path: window.location.pathname + window.location.hash,
-          url: window.location.href,
-          // Add product_id to page properties if on product detail page
-          ...(currentProductId && { product_id: currentProductId })
-        });
-      }
-    };
-
-    // Set initial page and trigger Segment page call on component mount (after refresh)
-    handleNavigationAndTracking();
-
-    // Listen for hash changes for subsequent in-app navigation
-    window.addEventListener('hashchange', handleNavigationAndTracking);
-
-    // Cleanup listener
-    return () => {
-      window.removeEventListener('hashchange', handleNavigationAndTracking);
-    };
-  }, []); // Run once on mount
-
-  // Placeholder for initial user identification (e.g., on first load or after login)
-  useEffect(() => {
-    const anonymousId = localStorage.getItem('anonymousId');
-    if (!anonymousId) {
-      const newAnonymousId = `anon-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-      localStorage.setItem('anonymousId', newAnonymousId);
-      if (window.analytics) {
-        window.analytics.identify(newAnonymousId);
-      }
-    } else {
-      if (window.analytics) {
-        window.analytics.identify(anonymousId);
-      }
+    // Add UTMs if navigating to product detail from Moogle
+    if (page === 'productDetail' && options.fromMoogle) {
+      newUrl.searchParams.append('utm_source', 'moogle');
+      newUrl.searchParams.append('utm_medium', 'organic');
+      newUrl.searchParams.append('utm_campaign', 'default_search');
+      newUrl.searchParams.append('from_moogle', 'true'); // Flag for Segment page call
     }
 
-    if (window.analytics) {
-      window.analytics.track('Application Loaded');
-    }
-
-  }, []);
-
-
-  // Internal navigation function (for internal app links)
-  const navigate = (page, productId = null) => {
-    let newHash = '';
     switch (page) {
       case 'home':
-        newHash = ''; // Empty hash for home
+        path = '/';
+        properties = { name: 'Home Page' };
         break;
       case 'products':
-        newHash = '#/products';
-        break;
-      case 'simulatedSearch':
-        newHash = '#/simulatedSearch';
+        path = '/products';
+        properties = { name: 'All Products Page' };
         break;
       case 'productDetail':
-        newHash = `#/product/${productId}`;
+        path = `/product/${productId}`;
+        const product = productsWithImages.find(p => p.id === productId);
+        properties = { name: 'Product Detail Page', productId: productId, productName: product?.name };
         break;
       case 'cart':
-        newHash = '#/cart';
+        path = '/cart';
+        properties = { name: 'Shopping Cart Page' };
         break;
-      case 'checkout':
-        newHash = '#/checkout';
+      case 'simulatedSearch':
+        path = '/simulated-search';
+        properties = { name: 'Simulated Search Page' };
         break;
       default:
-        newHash = '';
+        path = '/simulated-search'; // Default to simulated search
+        properties = { name: 'Simulated Search Page' };
     }
-    window.location.hash = newHash; // Update hash, which will trigger handleNavigationAndTracking
+
+    newUrl.hash = path;
+    // Only call pushState here, centralizing URL management
+    window.history.pushState({}, '', newUrl.toString());
+
+    // Segment Page call
+    if (window.analytics) {
+      // Special handling for ProductDetailPage when coming from Moogle
+      if (page === 'productDetail' && options.fromMoogle) {
+        window.analytics.page('Home Page Viewed', properties); // User's specific request
+      } else {
+        window.analytics.page(page, properties);
+      }
+    }
   };
 
-  const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
+  // Effect to handle initial page load and browser history (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const hash = window.location.hash;
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromMoogle = urlParams.get('from_moogle') === 'true';
+
+      let pageToNavigate = 'simulatedSearch'; // Default to simulated search
+      let productIdToNavigate = null;
+
+      if (hash.startsWith('#/product/')) {
+        productIdToNavigate = hash.replace('#/product/', '');
+        pageToNavigate = 'productDetail';
+      } else if (hash === '#/products') {
+        pageToNavigate = 'products';
+      } else if (hash === '#/cart') {
+        pageToNavigate = 'cart';
+      } else if (hash === '#/simulated-search') {
+        pageToNavigate = 'simulatedSearch';
+      }
+
+      setCurrentPage(pageToNavigate);
+      setCurrentProductId(productIdToNavigate);
+
+      // Manually trigger Segment page call for initial load or browser back/forward
+      if (window.analytics) {
+        let properties = {};
+        const product = productIdToNavigate ? productsWithImages.find(p => p.id === productIdToNavigate) : null;
+
+        switch (pageToNavigate) {
+          case 'home':
+            properties = { name: 'Home Page' };
+            break;
+          case 'products':
+            properties = { name: 'All Products Page' };
+            break;
+          case 'productDetail':
+            properties = { name: 'Product Detail Page', productId: productIdToNavigate, productName: product?.name };
+            break;
+          case 'cart':
+            properties = { name: 'Shopping Cart Page' };
+            break;
+          case 'simulatedSearch':
+            properties = { name: 'Simulated Search Page' };
+            break;
+        }
+
+        // Special handling for ProductDetailPage when coming from Moogle via popstate
+        if (pageToNavigate === 'productDetail' && fromMoogle) {
+          window.analytics.page('Home Page Viewed', properties); // User's specific request
+        } else {
+          window.analytics.page(pageToNavigate, properties);
+        }
+
+
+        // Also track Product List Viewed for relevant pages on initial load/popstate
+        if (pageToNavigate === 'home') {
+          window.analytics.track('Promotion Viewed', { // Promotion viewed on Home
+            promotion_id: 'labubu_popmart_banner_top',
+            creative: 'labubu_x_popmart_banner',
+            name: 'Labubu x Popmart Exclusive Partnership',
+            position: 'home_banner_top'
+          });
+          window.analytics.track('Product List Viewed', {
+            category: 'Featured Products',
+            products: featuredProducts.map((p, index) => formatProductForSegment(p, 1, index + 1))
+          });
+        } else if (pageToNavigate === 'products') {
+          window.analytics.track('Product List Viewed', {
+            category: 'All Products',
+            products: productsWithImages.map((p, index) => formatProductForSegment(p, 1, index + 1))
+          });
+        } else if (pageToNavigate === 'cart') {
+          window.analytics.track('Cart Viewed', {
+            cart_id: 'brandazon_cart_id',
+            products: cart.map(item => formatProductForSegment(item, item.quantity))
+          });
+        }
+      }
+    };
+
+    // Initial load
+    handlePopState();
+
+    // Listen for popstate events (browser back/forward buttons)
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []); // Empty dependency array means this runs once on mount
+
+
+  // Render the current page
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'home':
+        return <HomePage navigate={navigate} />;
+      case 'products':
+        return <ProductsPage navigate={navigate} />;
+      case 'productDetail':
+        return <ProductDetailPage productId={currentProductId} navigate={navigate} />;
+      case 'cart':
+        return <CartPage navigate={navigate} />;
+      case 'simulatedSearch':
+        return <SimulatedSearchEnginePage navigate={navigate} />;
+      default:
+        return <SimulatedSearchEnginePage navigate={navigate} />; // Default to simulated search
+    }
+  };
 
   return (
-    // Provide the cart context to all child components
     <CartContext.Provider value={{ cart, setCart }}>
       <div className="min-h-screen bg-gray-100 font-inter antialiased">
+        {/* Tailwind CSS CDN */}
+        <script src="https://cdn.tailwindcss.com"></script>
+        {/* Google Fonts - Inter */}
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
         <style>
           {`
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
             body {
               font-family: 'Inter', sans-serif;
             }
+            .min-h-\[calc\(100vh-120px\)\] {
+                min-height: calc(100vh - 120px); /* Adjust for header/footer height */
+            }
           `}
         </style>
-        <Header navigate={navigate} cartItemCount={cartItemCount} />
+
+        <Header navigate={navigate} cartItemCount={cart.reduce((sum, item) => sum + item.quantity, 0)} />
         <main className="py-8">
-          {(() => {
-            switch (currentPage) {
-              case 'home':
-                return <HomePage navigate={navigate} />;
-              case 'products':
-                return <ProductsPage navigate={navigate} />;
-              case 'simulatedSearch':
-                return <SimulatedSearchEnginePage products={products} />; // Pass products to SimulatedSearchEnginePage
-              case 'productDetail':
-                // ProductDetailPage now reads its own productId and UTMs from the URL
-                return <ProductDetailPage productId={selectedProductId} navigate={navigate} />;
-              case 'cart':
-                return <CartPage navigate={navigate} />;
-              case 'checkout':
-                return <CheckoutPage navigate={navigate} />;
-              default:
-                return <HomePage navigate={navigate} />;
-            }
-          })()}
+          {renderPage()}
         </main>
       </div>
     </CartContext.Provider>
   );
-};
+}
 
 export default App;
